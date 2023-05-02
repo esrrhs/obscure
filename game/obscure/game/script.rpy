@@ -436,6 +436,8 @@ label start:
 
     "说完，老朱一棒子将孙大圣打死在地"
 
+    hide sun
+
     laowang "什么狗屁大圣，敢来我这撒野？"
 
     "我大惊，孙大圣我是知道的"
@@ -472,10 +474,6 @@ label start:
 
     show zhu normal at left
 
-    show tang normal
-
-    show sha normal at right
-
     zhu "喂，我大师兄几天前来你这，看到过吗？"
 
     laowang "没有"
@@ -486,9 +484,15 @@ label start:
 
     zhu "之后，我大师兄就再也没出来"
 
+    show sha normal at right
+
+    sha "二师兄说的对，快交出大师兄"
+
     "老朱见事情败露，目露凶光"
 
     laowang "是又怎么样，他已经被我宰了吃了"
+
+    show tang normal
 
     tang "这位施主，你可知我是谁？"
 
@@ -558,7 +562,7 @@ label start:
 
     laoren "但是如果吃了唐僧肉真的能得道升仙，那老子也不怕了"
 
-    show e sad at right
+    show e normal at right
 
     e "对啊，你也吃吧"
 
