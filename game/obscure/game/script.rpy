@@ -4,6 +4,10 @@
 
 define me = Character("我")
 
+define suan = Character("算命先生")
+
+define pm = Character("PM")
+
 define e = Character("艾琳")
 
 
@@ -16,15 +20,66 @@ label start:
 
     scene bg 000100
 
-    "周一周一，马上归西"
+    me "周一周一，速速归西"
+    me "殆哉！殆哉！"
+    "如故，余且怨，骑乘而上班"
+    me "吾草，又雨。"
+
+    show suan normal at right
+
+    suan "公且慢，汝今必有大灾！"
+
+    me "哦？何灾？"
+
+    suan "天机不可泄露"
+
+    me "汝将无母也"
+
+    "遂不理，去公司上班"
 
     scene bg 000200
 
-    "周一周一，马上归西"
+    me "此乐问之乐，不思蜀也"
+
+    me "\"吾有万贯家财，想购置京城房屋？\"又一装逼小儿，可恨！"
+
+    show pm normal at right
+
+    pm "君TAPD单遗留甚多，如之奈何？"
+
+    me "莫急，待吾加班数日，即可"
+
+    pm "甚好"
+
+    hide pm
+
+    me "再刷乐问两时辰先"
+
+    "."
+
+    ".."
+
+    "..."
+
+    me "好浓之烟味，不好！"
 
     scene bg 000300
 
-    "周一周一，马上归西"
+    "才下雨，竟着火"
+
+    "今果有大灾"
+
+    scene bg 000200
+
+    me "不过火势不大，待洒家再写两行代码，转完TAPD，再撤不迟"
+
+    "..."
+
+    ".."
+
+    "."
+
+    me "不好，网已断，吾命休矣"
 
     scene bg 000400
 
