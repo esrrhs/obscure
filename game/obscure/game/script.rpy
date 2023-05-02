@@ -262,7 +262,7 @@ label start:
 
     me "朱先生，这地方挺漂亮"
 
-    show laowang happy at right
+    show laowang normal at right
 
     laowang "那还用说"
 
@@ -294,7 +294,7 @@ label start:
 
     "越来越近"
 
-    show nvhai happy
+    show nvhai normal
 
     nvhai "你好"
 
@@ -350,7 +350,7 @@ label start:
 
     "这里地处偏僻，风景宜人"
 
-    show e happy at left
+    show e normal at left
 
     e "快看，太阳出来啦！"
 
@@ -366,7 +366,7 @@ label start:
 
     "这里就是养殖的农场"
 
-    show e happy
+    show e normal
 
     e "走，我带你进去快看"
 
@@ -400,11 +400,11 @@ label start:
 
     scene bg 001500
 
-    show sun angry at left
+    show sun normal at left
 
     sun "爷爷我是孙悟空，可认识我吗？"
 
-    show laowang afraid at right
+    show laowang normal at right
 
     laowang "认识，认识"
 
@@ -426,11 +426,11 @@ label start:
 
     scene bg 001600
 
-    show sun angry at left
+    show sun normal at left
 
     sun "你带我来的这什么破地方？"
 
-    show laowang angry at right
+    show laowang normal at right
 
     laowang "你的葬身之地！"
 
@@ -470,7 +470,7 @@ label start:
 
     "终于，又有一行人来到"
 
-    show zhu angry at left
+    show zhu normal at left
 
     show tang normal
 
