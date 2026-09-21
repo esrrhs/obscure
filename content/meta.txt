@@ -1,0 +1,3 @@
+title=obscure
+start=1
+typeSpeed=40
