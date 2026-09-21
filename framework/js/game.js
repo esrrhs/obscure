@@ -13,8 +13,14 @@
   let nextBg = bgB;
   let typingTimer = null;
   let typingDone = true;
-  let fullText = '';
   let onSkip = null;
+
+  // 一幕内的分句推进
+  let lines = [];
+  let lineIndex = 0;
+  let awaitingAdvance = false; // 当前句打完，等点击进入下一句
+  let sceneChoicesTxt = null;
+  let busy = false; // goto / advance 进行中，避免连点乱序
 
   let audioCtx = null;
   function getAudioCtx() {
@@ -26,7 +32,6 @@
     return audioCtx;
   }
 
-  // 短促的"木鱼/墨点"感音效：正弦+快速衰减包络
   function playTone({ freq = 660, dur = 0.09, type = 'sine', gain = 0.15 } = {}) {
     const ctx = getAudioCtx();
     if (!ctx) return;
@@ -47,6 +52,7 @@
   function sfxSkip()   { playTone({ freq: 520, dur: 0.06, type: 'sine',     gain: 0.10 }); }
   function sfxScene()  { playTone({ freq: 330, dur: 0.20, type: 'sine',     gain: 0.14 }); }
   function sfxRestart(){ playTone({ freq: 220, dur: 0.30, type: 'sine',     gain: 0.16 }); }
+  function sfxAdvance(){ playTone({ freq: 700, dur: 0.05, type: 'sine',     gain: 0.08 }); }
 
   async function fetchText(url) {
     const r = await fetch(url);
@@ -83,6 +89,16 @@
       if (!text || !next) return null;
       return { text, next };
     }).filter(Boolean);
+  }
+
+  // 每一行非空文本 = 一句；玩家点一下才出下一句
+  function splitLines(text) {
+    return text
+      .replace(/\r\n/g, '\n')
+      .replace(/\s+$/, '')
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean);
   }
 
   function preloadImage(src) {
@@ -123,8 +139,8 @@
       clearTyping();
       textBox.classList.remove('error');
       textBox.textContent = '';
-      fullText = text;
       typingDone = false;
+      awaitingAdvance = false;
 
       const caret = document.createElement('span');
       caret.className = 'caret';
@@ -155,6 +171,7 @@
 
   function renderChoices(choices) {
     choicesBox.innerHTML = '';
+    awaitingAdvance = false;
     if (!choices.length) {
       const btn = document.createElement('button');
       btn.className = 'choice restart';
@@ -174,9 +191,51 @@
     });
   }
 
+  async function playCurrentLine() {
+    if (lineIndex >= lines.length) {
+      renderChoices(parseChoices(sceneChoicesTxt));
+      return;
+    }
+    await typeText(lines[lineIndex]);
+    if (lineIndex >= lines.length - 1) {
+      renderChoices(parseChoices(sceneChoicesTxt));
+    } else {
+      awaitingAdvance = true;
+    }
+  }
+
+  async function advance() {
+    if (busy) return;
+    // 打字中：先跳过打字，完整显示当前句
+    if (!typingDone && onSkip) {
+      sfxSkip();
+      onSkip();
+      return;
+    }
+    // 当前句已打完，且还有下一句
+    if (awaitingAdvance && lineIndex < lines.length - 1) {
+      busy = true;
+      try {
+        sfxAdvance();
+        lineIndex++;
+        awaitingAdvance = false;
+        await playCurrentLine();
+      } finally {
+        busy = false;
+      }
+    }
+  }
+
   async function goto(sceneId) {
+    busy = true;
     choicesBox.innerHTML = '';
     clearTyping();
+    awaitingAdvance = false;
+    onSkip = null;
+    typingDone = true;
+    lines = [];
+    lineIndex = 0;
+    sceneChoicesTxt = null;
 
     const base = `${CONTENT}/scenes/${sceneId}`;
     let text, choicesTxt, bgSrc;
@@ -189,18 +248,24 @@
     } catch (e) {
       textBox.classList.add('error');
       textBox.textContent = `无法加载幕 "${sceneId}"：${e.message}`;
+      busy = false;
       return;
     }
 
+    sceneChoicesTxt = choicesTxt;
+    lines = splitLines(text);
+    if (!lines.length) lines = [''];
+
     swapBg(bgSrc);
     sfxScene();
-    await typeText(text.replace(/\r\n/g, '\n').replace(/\s+$/,''));
-    renderChoices(parseChoices(choicesTxt));
+    try {
+      await playCurrentLine();
+    } finally {
+      busy = false;
+    }
   }
 
-  overlay.addEventListener('click', () => {
-    if (!typingDone && onSkip) { sfxSkip(); onSkip(); }
-  });
+  overlay.addEventListener('click', () => { advance(); });
 
   (async function main() {
     try {
