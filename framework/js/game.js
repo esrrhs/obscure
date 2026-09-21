@@ -188,7 +188,6 @@
   async function showPortraitForLine(line) {
     const speaker = parseSpeaker(line);
     if (!speaker) {
-      // 旁白：收起立绘
       hidePortrait();
       return;
     }
@@ -197,7 +196,7 @@
       hidePortrait();
       return;
     }
-    if (charId === currentPortraitId) {
+    if (charId === currentPortraitId && portraitEl.getAttribute('src')) {
       portraitEl.classList.add('show');
       return;
     }
@@ -206,12 +205,17 @@
       hidePortrait();
       return;
     }
-    // 先淡出再换图，避免闪一下
     portraitEl.classList.remove('show');
-    await new Promise(r => setTimeout(r, 120));
-    portraitEl.style.backgroundImage = `url("${src}")`;
+    await new Promise(r => setTimeout(r, 80));
+    await new Promise(resolve => {
+      const done = () => resolve();
+      portraitEl.onload = done;
+      portraitEl.onerror = done;
+      // 已缓存时 onload 可能不触发
+      portraitEl.src = src;
+      if (portraitEl.complete) done();
+    });
     currentPortraitId = charId;
-    // 强制回流后再淡入
     void portraitEl.offsetWidth;
     portraitEl.classList.add('show');
   }
@@ -346,7 +350,7 @@
     lineIndex = 0;
     sceneChoicesTxt = null;
     hidePortrait();
-    portraitEl.style.backgroundImage = 'none';
+    portraitEl.removeAttribute('src');
 
     const base = `${CONTENT}/scenes/${sceneId}`;
     let text, choicesTxt, bgSrc;
