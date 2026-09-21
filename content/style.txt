@@ -1,21 +1,11 @@
 # obscure 统一视觉风格
 
-## 风格锚点（所有背景/立绘必须遵守）
-Traditional Chinese ink wash (水墨) + gongbi fine-line on silk scroll,
-cinematic composition, muted charcoal ink with selective vermilion/indigo,
-atmospheric mist. NOT photograph / NOT photorealism.
-
-## 提示词语言
-文生图提示词使用英文（FLUX 对中文遵从度差），风格锚点写进每条 img.txt 开头。
-
-## 禁止
-- 真人照片写实、水印、字幕、UI、二维码
-- 过度血腥特写（可用墨渍/暗影暗示）
-
 ## 背景
-- 比例 16:9（生成后中心裁切）
-- 以环境、建筑、光影、气象为主
+玄幻恐怖（dark fantasy horror / 水墨重彩国风），血月与黑雾，腥红渍迹，腐朽与妖气，高对比光影。
+比例 16:9，空景为主，用环境痕迹暗示血腥。
 
 ## 立绘
-- 比例 3:4 半身
-- 统一墨线勾勒，干净背景
+水墨工笔半身，干净背景；与背景的恐怖氛围可形成反差。
+
+## 提示词
+英文为主（生图模型遵从度更好），见各幕 `img.txt`。

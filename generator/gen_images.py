@@ -100,7 +100,7 @@ def gen(prompt: str, size: str, dst: Path, retries: int = 5) -> None:
                 _im = _Image.open(out).convert("L")
                 _px = list(_im.getdata())
                 _mean = sum(_px) / max(len(_px), 1)
-                if _mean < 20:
+                if _mean < 8:
                     out.unlink(missing_ok=True)
                     raise RuntimeError(f"image too dark mean={_mean:.1f}, treat as failed")
             except RuntimeError:
@@ -155,7 +155,7 @@ def gen_pollinations(prompt: str, size: str, dst: Path) -> None:
     from PIL import Image as _Image
     _im = _Image.open(out).convert("L")
     _mean = sum(_im.getdata()) / max(_im.size[0] * _im.size[1], 1)
-    if _mean < 20:
+    if _mean < 8:
         out.unlink(missing_ok=True)
         raise RuntimeError(f"pollinations too dark mean={_mean:.1f}")
     print(f"  [OK/poll] {out} ({out.stat().st_size} bytes)")
