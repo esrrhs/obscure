@@ -117,9 +117,11 @@
 
   // 从「角色："台词"」解析说话人；旁白返回 null
   function parseSpeaker(line) {
-    const m = line.match(/^(.+?)[：:]["“「]/
-    if (!m) return null;
-    return m[1].trim();
+    const idx = line.search(/[：:]/);
+    if (idx <= 0) return null;
+    const q = line.charAt(idx + 1);
+    if (q !== '"' && q !== '\u201c' && q !== '\u300c') return null;
+    return line.slice(0, idx).trim();
   }
 
   function preloadImage(src) {
