@@ -117,7 +117,7 @@
 
   // 从「角色："台词"」解析说话人；旁白返回 null
   function parseSpeaker(line) {
-    const m = line.match(/^(.+?)[：:]["“「]//);
+    const m = line.match(/^(.+?)[：:]["“「]/
     if (!m) return null;
     return m[1].trim();
   }
