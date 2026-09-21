@@ -19,6 +19,7 @@
   let lines = [];
   let lineIndex = 0;
   let awaitingAdvance = false;
+  let awaitingScene = false; // 本幕说完，下一次点击进入下一幕（线性「继续」）
   let sceneChoicesTxt = null;
   let busy = false;
 
@@ -96,7 +97,10 @@
 
   function parseChoices(txt) {
     if (!txt) return [];
+    const raw = txt.trim();
+    if (!raw || raw === '结局') return [];
     return txt.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
+      if (line === '结局') return null;
       const idx = line.lastIndexOf('|');
       if (idx < 0) return null;
       const text = line.slice(0, idx).trim();
@@ -104,6 +108,26 @@
       if (!text || !next) return null;
       return { text, next };
     }).filter(Boolean);
+  }
+
+  // 唯一选项且文案像「继续」→ 不显示按钮，点击直接进下一幕
+  function isLinearContinue(choices) {
+    return choices.length === 1 && /^(继续|下一[幕页章]?|接着|往下)$/.test(choices[0].text);
+  }
+
+  function finishScene() {
+    const choices = parseChoices(sceneChoicesTxt);
+    if (!choices.length) {
+      renderChoices([]);
+      return;
+    }
+    if (isLinearContinue(choices)) {
+      choicesBox.innerHTML = '';
+      awaitingAdvance = false;
+      awaitingScene = true;
+      return;
+    }
+    renderChoices(choices);
   }
 
   function splitLines(text) {
@@ -245,6 +269,7 @@
   function renderChoices(choices) {
     choicesBox.innerHTML = '';
     awaitingAdvance = false;
+    awaitingScene = false;
     if (!choices.length) {
       const btn = document.createElement('button');
       btn.className = 'choice restart';
@@ -266,14 +291,14 @@
 
   async function playCurrentLine() {
     if (lineIndex >= lines.length) {
-      renderChoices(parseChoices(sceneChoicesTxt));
+      finishScene();
       return;
     }
     const line = lines[lineIndex];
     await showPortraitForLine(line);
     await typeText(line);
     if (lineIndex >= lines.length - 1) {
-      renderChoices(parseChoices(sceneChoicesTxt));
+      finishScene();
     } else {
       awaitingAdvance = true;
     }
@@ -284,6 +309,16 @@
     if (!typingDone && onSkip) {
       sfxSkip();
       onSkip();
+      return;
+    }
+    // 本幕已说完：线性剧情直接进下一幕
+    if (awaitingScene) {
+      const choices = parseChoices(sceneChoicesTxt);
+      if (choices.length === 1) {
+        awaitingScene = false;
+        sfxClick();
+        goto(choices[0].next);
+      }
       return;
     }
     if (awaitingAdvance && lineIndex < lines.length - 1) {
@@ -304,6 +339,7 @@
     choicesBox.innerHTML = '';
     clearTyping();
     awaitingAdvance = false;
+    awaitingScene = false;
     onSkip = null;
     typingDone = true;
     lines = [];
