@@ -1,0 +1,12 @@
+我=me
+算命先生=suan
+PM=pm
+路人=luren
+猪妖=laozhu
+老朱=laozhu
+女孩=eileen
+艾琳=eileen
+孙大圣=sun
+猪八戒=zhu
+沙僧=sha
+唐僧=tang

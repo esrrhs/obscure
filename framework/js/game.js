@@ -4,6 +4,7 @@
 
   const bgA = document.getElementById('bg-a');
   const bgB = document.getElementById('bg-b');
+  const portraitEl = document.getElementById('portrait');
   const textBox = document.getElementById('text-box');
   const choicesBox = document.getElementById('choices');
   const overlay = document.getElementById('overlay');
@@ -15,12 +16,16 @@
   let typingDone = true;
   let onSkip = null;
 
-  // 一幕内的分句推进
   let lines = [];
   let lineIndex = 0;
-  let awaitingAdvance = false; // 当前句打完，等点击进入下一句
+  let awaitingAdvance = false;
   let sceneChoicesTxt = null;
-  let busy = false; // goto / advance 进行中，避免连点乱序
+  let busy = false;
+
+  // 角色名 -> 立绘目录 id；立绘路径缓存
+  let speakerMap = {};
+  const portraitCache = {}; // id -> src | null
+  let currentPortraitId = null;
 
   let audioCtx = null;
   function getAudioCtx() {
@@ -79,6 +84,16 @@
     return out;
   }
 
+  function parseSpeakerMap(txt) {
+    const out = {};
+    if (!txt) return out;
+    txt.split(/\r?\n/).forEach(line => {
+      const m = line.match(/^\s*([^#=\s][^=]*?)\s*=\s*(.*?)\s*$/);
+      if (m) out[m[1].trim()] = m[2].trim();
+    });
+    return out;
+  }
+
   function parseChoices(txt) {
     if (!txt) return [];
     return txt.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(line => {
@@ -91,7 +106,6 @@
     }).filter(Boolean);
   }
 
-  // 每一行非空文本 = 一句；玩家点一下才出下一句
   function splitLines(text) {
     return text
       .replace(/\r\n/g, '\n')
@@ -99,6 +113,13 @@
       .split('\n')
       .map(l => l.trim())
       .filter(Boolean);
+  }
+
+  // 从「角色："台词"」解析说话人；旁白返回 null
+  function parseSpeaker(line) {
+    const m = line.match(/^(.+?)[：:]["“「]//);
+    if (!m) return null;
+    return m[1].trim();
   }
 
   function preloadImage(src) {
@@ -117,6 +138,56 @@
       if (ok) return ok;
     }
     return null;
+  }
+
+  async function findPortrait(charId) {
+    if (charId in portraitCache) return portraitCache[charId];
+    for (const ext of IMAGE_EXTS) {
+      const src = `${CONTENT}/characters/${charId}/portrait.${ext}`;
+      const ok = await preloadImage(src);
+      if (ok) {
+        portraitCache[charId] = ok;
+        return ok;
+      }
+    }
+    portraitCache[charId] = null;
+    return null;
+  }
+
+  function hidePortrait() {
+    portraitEl.classList.remove('show');
+    currentPortraitId = null;
+  }
+
+  async function showPortraitForLine(line) {
+    const speaker = parseSpeaker(line);
+    if (!speaker) {
+      // 旁白：收起立绘
+      hidePortrait();
+      return;
+    }
+    const charId = speakerMap[speaker];
+    if (!charId) {
+      hidePortrait();
+      return;
+    }
+    if (charId === currentPortraitId) {
+      portraitEl.classList.add('show');
+      return;
+    }
+    const src = await findPortrait(charId);
+    if (!src) {
+      hidePortrait();
+      return;
+    }
+    // 先淡出再换图，避免闪一下
+    portraitEl.classList.remove('show');
+    await new Promise(r => setTimeout(r, 120));
+    portraitEl.style.backgroundImage = `url("${src}")`;
+    currentPortraitId = charId;
+    // 强制回流后再淡入
+    void portraitEl.offsetWidth;
+    portraitEl.classList.add('show');
   }
 
   function swapBg(src) {
@@ -196,7 +267,9 @@
       renderChoices(parseChoices(sceneChoicesTxt));
       return;
     }
-    await typeText(lines[lineIndex]);
+    const line = lines[lineIndex];
+    await showPortraitForLine(line);
+    await typeText(line);
     if (lineIndex >= lines.length - 1) {
       renderChoices(parseChoices(sceneChoicesTxt));
     } else {
@@ -206,13 +279,11 @@
 
   async function advance() {
     if (busy) return;
-    // 打字中：先跳过打字，完整显示当前句
     if (!typingDone && onSkip) {
       sfxSkip();
       onSkip();
       return;
     }
-    // 当前句已打完，且还有下一句
     if (awaitingAdvance && lineIndex < lines.length - 1) {
       busy = true;
       try {
@@ -236,6 +307,8 @@
     lines = [];
     lineIndex = 0;
     sceneChoicesTxt = null;
+    hidePortrait();
+    portraitEl.style.backgroundImage = 'none';
 
     const base = `${CONTENT}/scenes/${sceneId}`;
     let text, choicesTxt, bgSrc;
@@ -269,8 +342,12 @@
 
   (async function main() {
     try {
-      const metaTxt = await fetchText(`${CONTENT}/meta.txt`);
+      const [metaTxt, mapTxt] = await Promise.all([
+        fetchText(`${CONTENT}/meta.txt`),
+        tryFetchText(`${CONTENT}/characters/index.txt`),
+      ]);
       meta = Object.assign(meta, parseMeta(metaTxt));
+      speakerMap = parseSpeakerMap(mapTxt);
       if (meta.title) document.title = meta.title;
       await goto(String(meta.start));
     } catch (e) {
