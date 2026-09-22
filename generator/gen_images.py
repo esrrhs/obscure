@@ -35,11 +35,11 @@ PORTRAIT_SIZE = "768x1024"
 SHARP_SUFFIX = ", sharp focus, highly detailed, crisp brushwork, clear edges, ultra detailed"
 
 
-def crop_to_aspect(path: Path, aspect: float) -> None:
+def crop_to_aspect(path: Path, aspect: float, keep_png: bool = False) -> Path | None:
     try:
         from PIL import Image
     except ImportError:
-        return
+        return None
     im = Image.open(path).convert("RGB")
     w, h = im.size
     cur = w / h
@@ -52,12 +52,38 @@ def crop_to_aspect(path: Path, aspect: float) -> None:
             nh = int(w / aspect)
             top = (h - nh) // 2
             im = im.crop((0, top, w, top + nh))
-    # Kolors returns PNG; save as high-quality JPEG to keep repo smaller
-    out = path if path.suffix.lower() in {".jpg", ".jpeg"} else path.with_suffix(".jpg")
-    im.save(out, quality=93, optimize=True)
+    if keep_png:
+        out = path if path.suffix.lower() == ".png" else path.with_suffix(".png")
+        im.save(out, "PNG", optimize=True)
+    else:
+        # Kolors returns PNG; save as high-quality JPEG to keep repo smaller
+        out = path if path.suffix.lower() in {".jpg", ".jpeg"} else path.with_suffix(".jpg")
+        im.save(out, quality=93, optimize=True)
     if out != path and path.exists():
         path.unlink()
     return out
+
+
+def make_transparent_portrait(src: Path, dst: Path) -> Path:
+    """Remove background → RGBA PNG, harden alpha, crop to content."""
+    from PIL import Image
+    from rembg import remove
+
+    im = Image.open(src).convert("RGBA")
+    cut = remove(im)
+    r, g, b, a = cut.split()
+    a = a.point(lambda x: 0 if x < 40 else (255 if x > 180 else x))
+    out = Image.merge("RGBA", (r, g, b, a))
+    bbox = out.getbbox()
+    if bbox:
+        out = out.crop(bbox)
+    dst = dst.with_suffix(".png")
+    for p in dst.parent.glob(dst.stem + ".*"):
+        if p.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"} and p != dst:
+            p.unlink(missing_ok=True)
+    out.save(dst, "PNG", optimize=True)
+    print(f"  [透明立绘] {dst} ({out.size[0]}x{out.size[1]})")
+    return dst
 
 
 def mean_luma(path: Path) -> float:
@@ -67,7 +93,7 @@ def mean_luma(path: Path) -> float:
     return sum(px) / max(len(px), 1)
 
 
-def _write_image(raw: bytes, dst: Path, aspect: float | None) -> Path:
+def _write_image(raw: bytes, dst: Path, aspect: float | None, portrait: bool = False) -> Path:
     dst.parent.mkdir(parents=True, exist_ok=True)
     if raw[:8] == b"\x89PNG\r\n\x1a\n":
         tmp = dst.with_suffix(".png")
@@ -80,20 +106,20 @@ def _write_image(raw: bytes, dst: Path, aspect: float | None) -> Path:
             p.unlink()
     tmp.write_bytes(raw)
     if aspect:
-        out = crop_to_aspect(tmp, aspect) or tmp
+        out = crop_to_aspect(tmp, aspect, keep_png=portrait) or tmp
     else:
         out = tmp
-    # ensure we point to jpg if converted
     if isinstance(out, Path):
         final = out
     else:
         final = tmp.with_suffix(".jpg") if tmp.with_suffix(".jpg").exists() else tmp
     if not final.exists():
-        # crop_to_aspect may have renamed
         cands = list(dst.parent.glob(dst.stem + ".*"))
         if not cands:
             raise RuntimeError("image missing after write")
         final = cands[0]
+    if portrait:
+        final = make_transparent_portrait(final, dst.with_suffix(".png"))
     m = mean_luma(final)
     if m < 8:
         final.unlink(missing_ok=True)
@@ -105,15 +131,17 @@ def _write_image(raw: bytes, dst: Path, aspect: float | None) -> Path:
 def gen_kolors(prompt: str, dst: Path, retries: int = 5) -> None:
     if not KOLORS_KEY:
         raise RuntimeError("未设置 KOLORS_API_KEY（可写在项目根 .env，勿提交）")
+    is_portrait = dst.name.startswith("portrait")
+    size = PORTRAIT_SIZE if is_portrait else KOLORS_SIZE
     body = json.dumps({
         "model": KOLORS_MODEL,
         "prompt": prompt + SHARP_SUFFIX,
-        "image_size": KOLORS_SIZE,
+        "image_size": size,
         "num_inference_steps": 30,
         "guidance_scale": 7.5,
     }).encode()
     wait = 2
-    aspect = 16 / 9 if dst.name.startswith("bg") or "cover" in str(dst) else (3 / 4 if dst.name.startswith("portrait") else 16 / 9)
+    aspect = 3 / 4 if is_portrait else 16 / 9
     for attempt in range(1, retries + 1):
         try:
             req = urllib.request.Request(
@@ -127,7 +155,7 @@ def gen_kolors(prompt: str, dst: Path, retries: int = 5) -> None:
                 raise RuntimeError(f"no url: {str(data)[:200]}")
             with urllib.request.urlopen(imgs[0]["url"], timeout=120) as r:
                 raw = r.read()
-            _write_image(raw, dst, aspect)
+            _write_image(raw, dst, aspect, portrait=is_portrait)
             return
         except Exception as e:
             print(f"  [Kolors 失败 {attempt}/{retries}] {e}")
@@ -140,6 +168,7 @@ def gen_kolors(prompt: str, dst: Path, retries: int = 5) -> None:
 def gen_freellmapi(prompt: str, size: str, dst: Path, retries: int = 5) -> None:
     if not FREE_KEY:
         raise RuntimeError("未设置 FREELLMAPI_API_KEY")
+    is_portrait = dst.name.startswith("portrait")
     body = json.dumps({
         "model": FREE_MODEL,
         "prompt": prompt + SHARP_SUFFIX,
@@ -148,7 +177,7 @@ def gen_freellmapi(prompt: str, size: str, dst: Path, retries: int = 5) -> None:
         "response_format": "b64_json",
     }).encode()
     wait = 2
-    aspect = 16 / 9 if dst.name.startswith("bg") or "cover" in str(dst) else (3 / 4 if dst.name.startswith("portrait") else None)
+    aspect = 3 / 4 if is_portrait else (16 / 9 if dst.name.startswith("bg") or "cover" in str(dst) else None)
     for attempt in range(1, retries + 1):
         try:
             req = urllib.request.Request(
@@ -167,7 +196,7 @@ def gen_freellmapi(prompt: str, size: str, dst: Path, retries: int = 5) -> None:
                     raw = r.read()
             else:
                 raise RuntimeError("no image payload")
-            _write_image(raw, dst, aspect)
+            _write_image(raw, dst, aspect, portrait=is_portrait)
             return
         except Exception as e:
             print(f"  [freellmapi 失败 {attempt}/{retries}] {e}")
@@ -223,8 +252,8 @@ def main():
                 print(f"[跳过立绘 {ch.name}] 已有")
                 continue
             prompt = img_txt.read_text(encoding="utf-8").strip()
-            print(f"[立绘 {ch.name}] 生成…")
-            gen(prompt, PORTRAIT_SIZE, ch / "portrait.jpg")
+            print(f"[立绘 {ch.name}] 生成正面透明 PNG…")
+            gen(prompt, PORTRAIT_SIZE, ch / "portrait.png")
             done += 1
             if done >= max_n:
                 print(f"达到上限 {max_n}")
