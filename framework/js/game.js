@@ -1,5 +1,5 @@
 (function () {
-  const IMAGE_EXTS = ['png', 'jpg', 'webp', 'jpeg', 'gif', 'svg'];
+  const IMAGE_EXTS = ['png', 'webp', 'jpg', 'jpeg', 'gif', 'svg'];
   const CONTENT = '../content';
 
   const bgA = document.getElementById('bg-a');

@@ -33,12 +33,12 @@ html, body {
   max-width: min(46vw, 420px);
   object-fit: contain;
   object-position: left bottom;
+  background: transparent;
   opacity: 0;
   transform: translateX(-24px);
   transition: opacity 0.35s ease, transform 0.35s ease;
   pointer-events: none;
-  filter: drop-shadow(0 10px 28px rgba(0,0,0,0.65));
-  /* 隐藏未加载时的破图边框 */
+  filter: drop-shadow(0 8px 20px rgba(0,0,0,0.45));
   visibility: hidden;
 }
 
