@@ -1,25 +1,31 @@
 # 图片生成
 
-为 `content/scenes/` 与 `content/characters/` 生成背景与立绘。
+默认使用**硅基流动 Kolors**（与 TheMandate 相同），输出约 **2016×1120**。
+
+## 配置
+
+在项目根目录创建 `.env`（已 gitignore，**不要提交**）：
+
+```
+KOLORS_API_KEY=sk-xxx
+```
+
+可选：
+
+```
+IMAGE_ENGINE=kolors          # 默认 kolors；也可 freellmapi
+FREELLMAPI_API_KEY=...       # 仅 IMAGE_ENGINE=freellmapi 时需要
+```
 
 ## 用法
 
-通过 FreeLLMAPI 调 NVIDIA FLUX：
-
 ```bash
-export FREELLMAPI_API_KEY=freellmapi-xxx
-export FREELLMAPI_URL=http://127.0.0.1:13001/v1/images/generations   # 可选
-export IMAGE_MODEL=black-forest-labs/flux.1-dev                      # 可选
-
-python3 gen_images.py          # 背景 + 立绘 + 封面
-python3 gen_images.py bg       # 仅背景
-python3 gen_images.py char     # 仅立绘
+cd generator
+python3 gen_images.py bg       # 仅背景（缺什么补什么）
 python3 gen_images.py cover    # 仅封面
+python3 gen_images.py char     # 仅立绘
+python3 gen_images.py all      # 全部
 python3 gen_images.py bg 5     # 最多新生成 5 张
 ```
 
-已有 `bg.*` / `portrait.*` 会跳过，可安全续跑。提示词在各目录 `img.txt`。
-
-## 风格
-
-见 `../content/style.txt`。提示词以英文书写（FLUX 遵从度更好），锚定水墨工笔奇幻。
+已有 `bg.*` / `portrait.*` 会跳过。提示词在各目录 `img.txt`。

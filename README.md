@@ -77,12 +77,12 @@ typeSpeed=40
 
 ## 生图
 
+默认 **硅基流动 Kolors**（2016×1120）。在项目根 `.env` 写入 `KOLORS_API_KEY`（已 gitignore，勿提交）。
+
 ```bash
 cd generator
-export FREELLMAPI_API_KEY=freellmapi-xxx
-python3 gen_images.py          # 背景 + 立绘 + 封面
-python3 gen_images.py bg       # 仅背景
-python3 gen_images.py char     # 仅立绘
+python3 gen_images.py bg       # 背景
+python3 gen_images.py char     # 立绘
 ```
 
-已有图片会跳过，可续跑。更多说明见 `generator/README.md`。
+更多说明见 `generator/README.md`。
